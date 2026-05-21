@@ -1,0 +1,18 @@
+{
+  "name": "Snowboard Rush",
+  "short_name": "SnowRush",
+  "description": "Arcade snowboarding endless runner",
+  "start_url": ".",
+  "display": "fullscreen",
+  "orientation": "landscape",
+  "background_color": "#1b3b4f",
+  "theme_color": "#1b3b4f",
+  "icons": [
+    {
+      "src": "assets/icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}
