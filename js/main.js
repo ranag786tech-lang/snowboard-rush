@@ -1,4 +1,5 @@
-// main.js — Input handling, game loop orchestration, initialization
+// main.js — Input handling, game loop, initialization
+// ⚠️ Replace entire file
 (function() {
     'use strict';
 
@@ -39,11 +40,13 @@
         // Jump on any tap
         PlayerEntity.jump();
 
-        // Spin based on touch zone
-        if (canvasX < G.W * 0.4) {
-            PlayerEntity.setSpin('left');
-        } else if (canvasX > G.W * 0.6) {
-            PlayerEntity.setSpin('right');
+        // Spin based on touch zone (only if airborne)
+        if (G.player && !G.player.grounded) {
+            if (canvasX < G.W * 0.4) {
+                PlayerEntity.setSpin('left');
+            } else if (canvasX > G.W * 0.6) {
+                PlayerEntity.setSpin('right');
+            }
         }
     }
 
@@ -82,20 +85,6 @@
         }
     }
 
-    function spawnLandingParticles() {
-        const p = G.player;
-        for (let i = 0; i < 6; i++) {
-            G.landingParticles.push({
-                x: p.x + p.width/2 + (Math.random() - 0.5) * 16,
-                y: p.y + p.height - 3,
-                vx: (Math.random() - 0.5) * 65,
-                vy: Math.random() * -75 - 35,
-                life: 0.7,
-                size: Math.random() * 3 + 2
-            });
-        }
-    }
-
     // ── Main Update ────────────────────────────
     function update(dt) {
         if (dt > 0.12) dt = 0.12;
@@ -109,21 +98,13 @@
 
         if (G.state !== 'playing') return;
 
-        // Physics update
+        // Physics update (includes landing detection → calls TrickSystem.evaluateLanding)
         Physics.update(dt);
 
-        // Landing detection
-        if (G.player.grounded && !G.wasGrounded) {
-            spawnLandingParticles();
-            TrickSystem.onLanding();
-            AudioEngine.playLand();
-            AchievementSystem.check('landing');
-        }
-
-        // Trick update
+        // Trick update (rotation, spin decay, ground recovery)
         TrickSystem.update(dt);
 
-        // Obstacles
+        // Obstacles (rhythm-based spawning)
         ObstacleManager.update(dt);
 
         // Powerups
@@ -132,7 +113,7 @@
         // Bosses
         BossSystem.update(dt);
 
-        // Check achievements periodically
+        // Check achievements
         AchievementSystem.check();
     }
 
@@ -152,7 +133,6 @@
 
     // ── Init ───────────────────────────────────
     function init() {
-        // Remove old listeners (safe to call multiple times)
         window.removeEventListener('keydown', handleKeyDown);
         window.removeEventListener('keyup', handleKeyUp);
         canvas.removeEventListener('touchstart', handleTouchStart);
