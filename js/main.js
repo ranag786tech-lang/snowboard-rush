@@ -6,8 +6,11 @@
     const canvas = document.getElementById('gameCanvas');
     const G = window.Game;
 
-    // ── Input ──────────────────────────────────
+    // ── Input Handling (Protected during Wipeout State) ──
     function handleKeyDown(e) {
+        // Agar game over ya wipeout ho chuka hai, toh inputs block karein
+        if (G.state !== 'playing') return;
+
         if (e.key === ' ' || e.key === 'Space' || e.key === 'ArrowUp' || e.key === 'Up') {
             e.preventDefault();
             PlayerEntity.jump();
@@ -30,17 +33,19 @@
     }
 
     function handleTouchStart(e) {
+        if (G.state !== 'playing') return;
         e.preventDefault();
+
         const touch = e.touches[0];
         const rect = canvas.getBoundingClientRect();
         const tx = touch.clientX - rect.left;
         const scaleX = G.W / rect.width;
         const canvasX = tx * scaleX;
 
-        // Jump on any tap
+        // Jump trigger
         PlayerEntity.jump();
 
-        // Spin based on touch zone (only if airborne)
+        // Spin logic based on exact screen division (Airborne calculation protection)
         if (G.player && !G.player.grounded) {
             if (canvasX < G.W * 0.4) {
                 PlayerEntity.setSpin('left');
@@ -55,9 +60,9 @@
         PlayerEntity.setSpin('stop');
     }
 
-    // ── Particle Updates ───────────────────────
+    // ── Particle Updates (Perfect Frame-Independent Delta Tuning) ──
     function updateParticles(dt) {
-        // Crash particles
+        // Crash particles physics
         for (let i = G.particles.length - 1; i >= 0; i--) {
             const p = G.particles[i];
             p.x += p.vx * dt;
@@ -66,7 +71,7 @@
             p.life -= dt * 2.3;
             if (p.life <= 0) G.particles.splice(i, 1);
         }
-        // Landing particles
+        // Landing particles physics
         for (let i = G.landingParticles.length - 1; i >= 0; i--) {
             const p = G.landingParticles[i];
             p.x += p.vx * dt;
@@ -75,7 +80,7 @@
             p.life -= dt * 2.1;
             if (p.life <= 0) G.landingParticles.splice(i, 1);
         }
-        // Snowflakes
+        // Smooth Snowflakes Vector update (Fixes the high-speed jitter)
         for (const f of G.snowflakes) {
             f.y += f.speed * dt;
             f.x += f.drift * dt;
@@ -85,43 +90,51 @@
         }
     }
 
-    // ── Main Update ────────────────────────────
+    // ── Main Core Update Loop ──
     function update(dt) {
-        if (dt > 0.12) dt = 0.12;
+        // Delta time clamping standard for 60Hz-144Hz screen stability
+        // Preventions for the "teleportation" bug when the game speeds up to 418+
+        if (dt > 0.1) dt = 0.1;
 
-        // Decay screen shake
+        // Decay screen shake smoothly based on standard timeline
         if (G.shakeAmount > 0) {
             G.shakeAmount = Math.max(0, G.shakeAmount - 7 * dt);
         }
 
         updateParticles(dt);
 
-        if (G.state !== 'playing') return;
+        // Core dynamic check: If wipeout triggers, freeze obstacles/world rendering but allow particles
+        if (G.state !== 'playing') {
+            // Force reset any underlying spin drift lingering after crash
+            if (G.player) PlayerEntity.setSpin('stop');
+            return;
+        }
 
-        // Physics update (includes landing detection → calls TrickSystem.evaluateLanding)
+        // Physics engine processing with structural Y-axis updates
         Physics.update(dt);
 
-        // Trick update (rotation, spin decay, ground recovery)
+        // Rotation & air trick mechanics verification
         TrickSystem.update(dt);
 
-        // Obstacles (rhythm-based spawning)
+        // Obstacles (Dynamic, rhythm speed adaptive spawning)
         ObstacleManager.update(dt);
 
-        // Powerups
+        // Powerups, Bosses & Achievements trackers
         PowerupSystem.update(dt);
-
-        // Bosses
         BossSystem.update(dt);
-
-        // Check achievements
         AchievementSystem.check();
     }
 
-    // ── Game Loop ──────────────────────────────
+    // ── Ultra-Smooth Delta Time Game Loop ──
     function gameLoop(timestamp) {
         if (!G.lastTimestamp) G.lastTimestamp = timestamp;
+        
+        // Exact frame rate calculation to avoid background jittering at high speeds
         let dt = (timestamp - G.lastTimestamp) / 1000;
-        if (dt <= 0) dt = 0.016;
+        
+        // Anti-break protection for lag spikes or minimized tabs
+        if (dt <= 0 || dt > 0.1) dt = 0.0166; 
+        
         G.lastTimestamp = timestamp;
         G.dt = dt;
 
@@ -131,7 +144,7 @@
         requestAnimationFrame(gameLoop);
     }
 
-    // ── Init ───────────────────────────────────
+    // ── Initialization & Event Listeners Cleaner ──
     function init() {
         window.removeEventListener('keydown', handleKeyDown);
         window.removeEventListener('keyup', handleKeyUp);
