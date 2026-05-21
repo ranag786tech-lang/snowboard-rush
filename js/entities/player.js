@@ -1,4 +1,5 @@
-// player.js — Player entity creation and state
+// player.js — Player entity with spin decay support
+// ⚠️ Replace entire file
 (function() {
     'use strict';
 
@@ -18,8 +19,7 @@
                 vy: 0,
                 grounded: true,
                 rotation: 0,
-                spinSpeed: 0,
-                targetRotation: 0
+                spinSpeed: 0
             };
             return G.player;
         },
@@ -68,12 +68,24 @@
             }
         },
 
+        // direction: 'left' | 'right' | 'stop'
         setSpin: function(direction) {
             const p = window.Game.player;
             if (!p || window.Game.state !== 'playing') return;
-            if (direction === 'left') p.spinSpeed = -9;
-            else if (direction === 'right') p.spinSpeed = 9;
-            else p.spinSpeed = 0;
+            if (!p.grounded) {
+                // Only add spin while airborne
+                if (direction === 'left') {
+                    p.spinSpeed = Math.max(p.spinSpeed - 2.5, -10);
+                } else if (direction === 'right') {
+                    p.spinSpeed = Math.min(p.spinSpeed + 2.5, 10);
+                }
+                // 'stop' — just let natural decay handle it; don't zero it instantly
+            } else {
+                // Can't spin on ground
+                if (direction !== 'stop') {
+                    p.spinSpeed = 0;
+                }
+            }
         }
     };
 })();
