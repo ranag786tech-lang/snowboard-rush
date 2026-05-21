@@ -1,29 +1,89 @@
-// obstacles.js — Obstacle spawning, management, and drawing
+// obstacles.js — Rhythm-based patterned obstacle spawning
+// ⚠️ Replace entire file
 (function() {
     'use strict';
 
     const OBS_WIDTH = 32, OBS_HEIGHT = 40;
-    const MIN_INTERVAL = 1.0, MAX_INTERVAL = 1.8;
+
+    // Rhythm pattern: each entry is a spawn instruction
+    // 'single' = one obstacle, normal gap after
+    // 'double' = two obstacles close together
+    // 'gap'    = longer pause (no obstacle, extra space)
+    const RHYTHM_PATTERN = [
+        'single', 'single', 'double', 'single',
+        'gap',    'single', 'double', 'single',
+        'single', 'gap',    'single', 'double'
+    ];
+
+    // Interval multipliers for each pattern type
+    const INTERVAL_MULTIPLIERS = {
+        'single': 1.0,
+        'double': 0.35,  // second obstacle follows quickly
+        'gap':    2.0     // longer breathing room
+    };
+
+    const BASE_INTERVAL = 1.15; // seconds at base speed
 
     window.ObstacleManager = {
+        _patternIndex: 0,
+        _doublePending: false,  // true when we need to spawn the second of a double
+
         reset: function() {
             const G = window.Game;
             G.obstacles = [];
             G.obstacleTimer = 0;
-            G.spawnDelay = MIN_INTERVAL + Math.random() * (MAX_INTERVAL - MIN_INTERVAL);
+            G.spawnDelay = BASE_INTERVAL;
+            this._patternIndex = 0;
+            this._doublePending = false;
         },
 
         update: function(dt) {
             const G = window.Game;
             if (G.state !== 'playing') return;
 
+            // Scale interval with speed — faster speed = more obstacles but still rhythmic
+            const speedFactor = Math.max(0.5, G.BASE_SPEED / Math.max(G.currentSpeed, G.BASE_SPEED));
+            const effectiveInterval = BASE_INTERVAL * speedFactor;
+
             G.obstacleTimer += dt;
+
             if (G.obstacleTimer >= G.spawnDelay) {
                 G.obstacleTimer = 0;
-                G.spawnDelay = MIN_INTERVAL + Math.random() * (MAX_INTERVAL - MIN_INTERVAL);
-                this.spawn(G);
+
+                if (this._doublePending) {
+                    // Spawn the second obstacle of a double pair
+                    this.spawnObstacle(G);
+                    this._doublePending = false;
+                    // After double, advance pattern and set normal interval
+                    this.advancePattern();
+                    G.spawnDelay = effectiveInterval * INTERVAL_MULTIPLIERS['single'];
+                } else {
+                    // Get current pattern instruction
+                    const instruction = RHYTHM_PATTERN[this._patternIndex];
+
+                    if (instruction === 'gap') {
+                        // Gap: no obstacle, just wait longer
+                        this.advancePattern();
+                        G.spawnDelay = effectiveInterval * INTERVAL_MULTIPLIERS['gap'];
+                    } else if (instruction === 'double') {
+                        // Double: spawn first obstacle now, flag second
+                        this.spawnObstacle(G);
+                        this._doublePending = true;
+                        G.spawnDelay = effectiveInterval * INTERVAL_MULTIPLIERS['double'];
+                    } else {
+                        // Single: normal spawn
+                        this.spawnObstacle(G);
+                        this.advancePattern();
+                        G.spawnDelay = effectiveInterval * INTERVAL_MULTIPLIERS['single'];
+                    }
+                }
+
+                // Add small randomness to prevent feeling robotic
+                G.spawnDelay += (Math.random() - 0.5) * 0.25;
+                G.spawnDelay = Math.max(0.35, G.spawnDelay);
             }
 
+            // Move obstacles & collision
             const speed = G.currentSpeed;
             for (let i = G.obstacles.length - 1; i >= 0; i--) {
                 const obs = G.obstacles[i];
@@ -52,7 +112,11 @@
             }
         },
 
-        spawn: function(G) {
+        advancePattern: function() {
+            this._patternIndex = (this._patternIndex + 1) % RHYTHM_PATTERN.length;
+        },
+
+        spawnObstacle: function(G) {
             const r = Math.random();
             let type;
             if (r < 0.38) type = 'rock';
