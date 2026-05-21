@@ -163,20 +163,11 @@
     }
 
     // Input
-    window.addEventListener('keydown', (e) => {
-        if (e.key === ' ' || e.key === 'Space' || e.key === 'ArrowUp' || e.key === 'Up') {
-            e.preventDefault();
-            jump();
-        }
-        // Spin controls for tricks
-        if (e.key === 'ArrowRight') {
-            player.spinSpeed = 8;
-        }
-        if (e.key === 'ArrowLeft') {
-            player.spinSpeed = -8;
-        }
-    });
-
+    window.addEventListener('keyup', (e) => {
+    if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') {
+        player.spinSpeed = 0;
+    }
+});
     canvas.addEventListener('touchstart', (e) => {
         e.preventDefault();
         jump();
