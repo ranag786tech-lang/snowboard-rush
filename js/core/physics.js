@@ -1,4 +1,5 @@
-// physics.js — Gravity, collision, ground detection
+// physics.js — Gravity, collision, ground detection with landing speed mod
+// ⚠️ Replace entire file
 (function() {
     'use strict';
 
@@ -8,7 +9,17 @@
             if (G.state !== 'playing') return;
 
             const p = G.player;
-            const speed = G.currentSpeed;
+            let speed = G.currentSpeed;
+
+            // Apply landing speed modifier if active
+            if (G._landingSpeedTimer && G._landingSpeedTimer > 0) {
+                G._landingSpeedTimer -= dt;
+                speed *= G._landingSpeedMod || 1.0;
+                if (G._landingSpeedTimer <= 0) {
+                    G._landingSpeedMod = 1.0;
+                    G._landingSpeedTimer = 0;
+                }
+            }
 
             // Apply gravity
             p.vy += G.GRAVITY * dt;
@@ -23,6 +34,15 @@
             if (p.y >= groundY) {
                 p.y = groundY;
                 p.vy = 0;
+                if (!p.grounded) {
+                    // Just landed — evaluate landing quality
+                    p.grounded = true;
+                    TrickSystem.evaluateLanding();
+                    // Spawn landing particles
+                    spawnLandingParticles();
+                    AudioEngine.playLand();
+                    AchievementSystem.check('landing');
+                }
                 p.grounded = true;
             } else {
                 p.grounded = false;
@@ -33,12 +53,6 @@
                 G.coyoteTimer = G.COYOTE_TIME;
             } else {
                 G.coyoteTimer -= dt;
-            }
-
-            // Smooth rotation reset when grounded
-            if (p.grounded && Math.abs(p.rotation) > 0.01) {
-                p.rotation *= 0.82;
-                if (Math.abs(p.rotation) < 0.02) p.rotation = 0;
             }
 
             // Update camera and distance
@@ -57,6 +71,11 @@
             // Boost speed multiplier
             if (G.boostActive) {
                 G.currentSpeed *= 1.7;
+            }
+
+            // Apply landing speed modifier to current speed display
+            if (G._landingSpeedTimer && G._landingSpeedTimer > 0) {
+                G.currentSpeed *= G._landingSpeedMod || 1.0;
             }
 
             return groundY;
@@ -79,4 +98,21 @@
             };
         }
     };
+
+    // Helper: spawn landing snow puffs
+    function spawnLandingParticles() {
+        const G = window.Game;
+        const p = G.player;
+        if (!p) return;
+        for (let i = 0; i < 7; i++) {
+            G.landingParticles.push({
+                x: p.x + p.width / 2 + (Math.random() - 0.5) * 18,
+                y: p.y + p.height - 3,
+                vx: (Math.random() - 0.5) * 70,
+                vy: Math.random() * -80 - 40,
+                life: 0.7,
+                size: Math.random() * 3 + 2
+            });
+        }
+    }
 })();
