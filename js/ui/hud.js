@@ -1,4 +1,5 @@
-// hud.js — Heads-up display (score, speed, boost, achievements, trick popups)
+// hud.js — HUD with landing quality feedback
+// ⚠️ Replace entire file
 (function() {
     'use strict';
 
@@ -28,30 +29,60 @@
                 ctx.fillText(`Combo x${G.comboCount}`, G.W/2, 55);
             }
 
-            // Trick popups
-            this.drawTrickPopups(ctx, G);
+            // Landing quality indicator
+            const quality = TrickSystem.getLandingQuality();
+            if (quality && G.player && G.player.grounded && G.state === 'playing') {
+                const colors = {
+                    'perfect': '#ffd700',
+                    'good': '#7fff7f',
+                    'sloppy': '#ffaa44',
+                    'crash': '#ff4444'
+                };
+                const labels = {
+                    'perfect': 'PERFECT',
+                    'good': 'GOOD',
+                    'sloppy': 'SLOPPY',
+                    'crash': 'CRASH'
+                };
+                ctx.fillStyle = colors[quality] || '#fff';
+                ctx.font = 'bold 11px "Segoe UI", system-ui, sans-serif';
+                ctx.textAlign = 'center';
+                const alpha = Math.min(1, TrickSystem._landingCooldown * 5);
+                ctx.globalAlpha = alpha;
+                ctx.fillText(labels[quality] || '', G.player.x + G.player.width/2, G.player.y - 12);
+                ctx.globalAlpha = 1;
+            }
+
+            // Trick & landing popups
+            this.drawPopups(ctx, G);
 
             // Achievement popups
             this.drawAchievementPopups(ctx, G);
         },
 
-        drawTrickPopups: function(ctx, G) {
+        drawPopups: function(ctx, G) {
             if (!G.trickList) return;
             for (let i = G.trickList.length - 1; i >= 0; i--) {
                 const t = G.trickList[i];
                 t.life -= 0.016;
                 if (t.life <= 0) { G.trickList.splice(i, 1); continue; }
                 const alpha = Math.min(1, t.life);
-                const yOffset = (1.5 - t.life) * 30;
-                ctx.fillStyle = `rgba(255,255,255,${alpha})`;
-                ctx.font = 'bold 16px "Segoe UI", system-ui, sans-serif';
+                const yOffset = (1.5 - t.life) * 28;
+                const color = t.color || '#ffffff';
+                ctx.fillStyle = color.replace(')', `,${alpha})`).replace('rgb', 'rgba');
+                if (color.startsWith('#')) {
+                    ctx.fillStyle = color;
+                    ctx.globalAlpha = alpha;
+                }
+                ctx.font = 'bold 15px "Segoe UI", system-ui, sans-serif';
                 ctx.textAlign = 'center';
                 ctx.fillText(t.text, t.x, t.y - yOffset);
-                if (t.points) {
+                if (t.points > 0) {
                     ctx.fillStyle = `rgba(255,215,0,${alpha})`;
-                    ctx.font = '12px "Segoe UI", system-ui, sans-serif';
-                    ctx.fillText(`+${t.points}`, t.x, t.y - yOffset + 18);
+                    ctx.font = '11px "Segoe UI", system-ui, sans-serif';
+                    ctx.fillText(`+${t.points}`, t.x, t.y - yOffset + 17);
                 }
+                ctx.globalAlpha = 1;
             }
         },
 
@@ -66,7 +97,11 @@
                 const bx = G.W/2, by = G.H - 80 - yOff;
                 ctx.fillStyle = `rgba(0,0,0,${alpha * 0.7})`;
                 ctx.beginPath();
-                ctx.roundRect(bx - 120, by - 18, 240, 40, 10);
+                if (ctx.roundRect) {
+                    ctx.roundRect(bx - 120, by - 18, 240, 40, 10);
+                } else {
+                    ctx.rect(bx - 120, by - 18, 240, 40);
+                }
                 ctx.fill();
                 ctx.fillStyle = `rgba(255,215,0,${alpha})`;
                 ctx.font = 'bold 14px "Segoe UI", system-ui, sans-serif';
@@ -78,22 +113,4 @@
             }
         }
     };
-
-    // Polyfill roundRect if needed
-    if (!CanvasRenderingContext2D.prototype.roundRect) {
-        CanvasRenderingContext2D.prototype.roundRect = function(x, y, w, h, r) {
-            if (typeof r === 'number') r = { tl: r, tr: r, br: r, bl: r };
-            this.beginPath();
-            this.moveTo(x + r.tl, y);
-            this.lineTo(x + w - r.tr, y);
-            this.quadraticCurveTo(x + w, y, x + w, y + r.tr);
-            this.lineTo(x + w, y + h - r.br);
-            this.quadraticCurveTo(x + w, y + h, x + w - r.br, y + h);
-            this.lineTo(x + r.bl, y + h);
-            this.quadraticCurveTo(x, y + h, x, y + h - r.bl);
-            this.lineTo(x, y + r.tl);
-            this.quadraticCurveTo(x, y, x + r.tl, y);
-            this.closePath();
-        };
-    }
 })();
