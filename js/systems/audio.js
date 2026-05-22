@@ -25,7 +25,7 @@
             gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + (rampTime || duration));
             osc.start(ctx.currentTime);
             osc.stop(ctx.currentTime + duration);
-        } catch(e) { /* audio not available */ }
+        } catch(e) {}
     }
 
     window.AudioEngine = {
