@@ -70,7 +70,6 @@
         TrickSystem.stopGrab();
     }
 
-    // Particle update (same)
     function updateParticles(dt) {
         for (let i = G.particles.length - 1; i >= 0; i--) {
             const p = G.particles[i];
@@ -98,7 +97,7 @@
         updateParticles(dt);
         if (G.state !== 'playing') return;
 
-        Physics.update(dt); // uses smoothed dt internally
+        Physics.update(dt);
         TrickSystem.update(dt);
         ObstacleManager.update(dt);
         PowerupSystem.update(dt);
