@@ -41,7 +41,6 @@
             ctx.font = '14px "Segoe UI", system-ui, sans-serif';
             ctx.fillText('Tap or press Space to ride again', G.W/2, G.H/2 + 55);
 
-            // Show earned achievements this run
             if (G.achievementsEarned && G.achievementsEarned.length > 0) {
                 ctx.fillStyle = 'rgba(255,255,255,0.7)';
                 ctx.font = '11px "Segoe UI", system-ui, sans-serif';
