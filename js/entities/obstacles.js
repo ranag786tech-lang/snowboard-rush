@@ -23,7 +23,7 @@
             const G = window.Game;
             G.obstacles = [];
             G.obstacleTimer = 0;
-            G.spawnDelay = BASE_INTERVAL;
+            G.spawnDelay = BASE_INTERVAL + Math.random() * 0.6;
             this._patternIndex = 0;
             this._doublePending = false;
         },
