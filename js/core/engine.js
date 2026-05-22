@@ -66,7 +66,7 @@
             this.trickList = [];
             this.terrainOffset = 0;
             this.obstacleTimer = 0;
-            this.spawnDelay = 1.2 + Math.random() * 1.0;
+            // spawnDelay is set by ObstacleManager.reset() with randomness
             this.coyoteTimer = 0;
             this.wasGrounded = true;
             this.mountainOffset1 = 0;
