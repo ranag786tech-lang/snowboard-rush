@@ -1,10 +1,8 @@
-// player.js — Player entity with grab support and stomp bounce
+// player.js
 (function() {
     'use strict';
 
-    const PLAYER_X = 140;
-    const PLAYER_WIDTH = 28;
-    const PLAYER_HEIGHT = 52;
+    const PLAYER_X = 140, PLAYER_WIDTH = 28, PLAYER_HEIGHT = 52;
 
     window.PlayerEntity = {
         create: function() {
@@ -18,7 +16,8 @@
                 vy: 0,
                 grounded: true,
                 rotation: 0,
-                spinSpeed: 0
+                spinSpeed: 0,
+                crashed: false
             };
             return G.player;
         },
@@ -37,6 +36,7 @@
                 G.player.x = PLAYER_X;
                 G.player.width = PLAYER_WIDTH;
                 G.player.height = PLAYER_HEIGHT;
+                G.player.crashed = false;
             }
         },
 
@@ -44,7 +44,6 @@
             const G = window.Game;
             const p = G.player;
             if (!p) return;
-
             if (G.state === 'over') {
                 G.init();
                 G.startGame();
@@ -53,9 +52,7 @@
             if (G.state === 'start') {
                 G.startGame();
             }
-
             if (!G.audioUnlocked) AudioEngine.init();
-
             if (G.coyoteTimer > 0 && G.state === 'playing') {
                 p.vy = G.JUMP_VELOCITY;
                 p.grounded = false;
@@ -70,15 +67,10 @@
             const p = window.Game.player;
             if (!p || window.Game.state !== 'playing') return;
             if (!p.grounded) {
-                if (direction === 'left') {
-                    p.spinSpeed = Math.max(p.spinSpeed - 2.5, -10);
-                } else if (direction === 'right') {
-                    p.spinSpeed = Math.min(p.spinSpeed + 2.5, 10);
-                }
+                if (direction === 'left') p.spinSpeed = Math.max(p.spinSpeed - 2.5, -10);
+                else if (direction === 'right') p.spinSpeed = Math.min(p.spinSpeed + 2.5, 10);
             } else {
-                if (direction !== 'stop') {
-                    p.spinSpeed = 0;
-                }
+                if (direction !== 'stop') p.spinSpeed = 0;
             }
         }
     };
