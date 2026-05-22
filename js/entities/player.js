@@ -1,5 +1,4 @@
-// player.js — Player entity with spin decay support
-// ⚠️ Replace entire file
+// player.js — Player entity with grab support and stomp bounce
 (function() {
     'use strict';
 
@@ -55,7 +54,6 @@
                 G.startGame();
             }
 
-            // Audio init on first interaction
             if (!G.audioUnlocked) AudioEngine.init();
 
             if (G.coyoteTimer > 0 && G.state === 'playing') {
@@ -68,20 +66,16 @@
             }
         },
 
-        // direction: 'left' | 'right' | 'stop'
         setSpin: function(direction) {
             const p = window.Game.player;
             if (!p || window.Game.state !== 'playing') return;
             if (!p.grounded) {
-                // Only add spin while airborne
                 if (direction === 'left') {
                     p.spinSpeed = Math.max(p.spinSpeed - 2.5, -10);
                 } else if (direction === 'right') {
                     p.spinSpeed = Math.min(p.spinSpeed + 2.5, 10);
                 }
-                // 'stop' — just let natural decay handle it; don't zero it instantly
             } else {
-                // Can't spin on ground
                 if (direction !== 'stop') {
                     p.spinSpeed = 0;
                 }
