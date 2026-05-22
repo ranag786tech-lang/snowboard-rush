@@ -1,4 +1,4 @@
-// hud.js — HUD with boss health and grab popups
+// hud.js — HUD with landing quality, trick popups, achievement notifications
 (function() {
     'use strict';
 
@@ -26,20 +26,13 @@
                 ctx.fillText(`Combo x${G.comboCount}`, G.W/2, 55);
             }
 
-            // Landing quality indicator
             const quality = TrickSystem.getLandingQuality();
             if (quality && G.player && G.player.grounded && G.state === 'playing') {
                 const colors = {
-                    'perfect': '#ffd700',
-                    'good': '#7fff7f',
-                    'sloppy': '#ffaa44',
-                    'crash': '#ff4444'
+                    'perfect': '#ffd700', 'good': '#7fff7f', 'sloppy': '#ffaa44', 'crash': '#ff4444'
                 };
                 const labels = {
-                    'perfect': 'PERFECT',
-                    'good': 'GOOD',
-                    'sloppy': 'SLOPPY',
-                    'crash': 'CRASH'
+                    'perfect': 'PERFECT', 'good': 'GOOD', 'sloppy': 'SLOPPY', 'crash': 'CRASH'
                 };
                 ctx.fillStyle = colors[quality] || '#fff';
                 ctx.font = 'bold 11px "Segoe UI", system-ui, sans-serif';
@@ -50,28 +43,20 @@
                 ctx.globalAlpha = 1;
             }
 
-            // Trick & landing popups
             this.drawPopups(ctx, G);
-
-            // Achievement popups
             this.drawAchievementPopups(ctx, G);
 
-            // Boss health bar (if active)
             const boss = BossSystem.getBoss();
             if (boss) {
                 const sx = boss.worldX - G.cameraX;
-                const barWidth = 80;
-                const barHeight = 8;
-                const barX = sx + (boss.width - barWidth)/2;
-                const barY = boss.y - 15;
-                ctx.fillStyle = '#333';
-                ctx.fillRect(barX, barY, barWidth, barHeight);
+                const barWidth = 80, barHeight = 8;
+                const barX = sx + (boss.width - barWidth)/2, barY = boss.y - 15;
+                ctx.fillStyle = '#333'; ctx.fillRect(barX, barY, barWidth, barHeight);
                 const hpPercent = boss.health / 5;
                 const hpColor = hpPercent > 0.5 ? '#4caf50' : (hpPercent > 0.25 ? '#ff9800' : '#f44336');
                 ctx.fillStyle = hpColor;
                 ctx.fillRect(barX, barY, barWidth * hpPercent, barHeight);
-                ctx.strokeStyle = '#fff';
-                ctx.lineWidth = 1;
+                ctx.strokeStyle = '#fff'; ctx.lineWidth = 1;
                 ctx.strokeRect(barX, barY, barWidth, barHeight);
                 ctx.fillStyle = '#fff';
                 ctx.font = 'bold 10px "Segoe UI"';
