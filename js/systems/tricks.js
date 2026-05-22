@@ -2,25 +2,20 @@
 (function() {
     'use strict';
 
-    const SPIN_DECAY = 14;       // rad/s²
-    const MAX_SPIN_SPEED = 10;   // rad/s
-
-    // Landing quality thresholds (angular distance from 0 or 2π multiple)
+    const SPIN_DECAY = 14;
+    const MAX_SPIN_SPEED = 10;
     const PERFECT_THRESHOLD = 0.15;
     const GOOD_THRESHOLD    = 0.50;
     const SLOPPY_THRESHOLD  = 1.10;
-
-    // Recovery rates
     const RECOVERY_PERFECT = 9.0;
     const RECOVERY_GOOD    = 5.0;
     const RECOVERY_SLOPPY  = 2.2;
     const RECOVERY_CRASH   = 1.0;
 
-    // Grab types and their score multipliers
     const GRAB_TYPES = {
         indy:    { name: 'Indy Grab',    multiplier: 1.3 },
         melon:   { name: 'Melon Grab',   multiplier: 1.5 },
-        stalefish: { name: 'Stalefish',  multiplier: 1.8 },
+        stalefish: { name: 'Stalefish',  multiplier: 1.8 }
     };
     const DEFAULT_GRAB = 'indy';
 
@@ -28,7 +23,7 @@
         _landingQuality: null,
         _recoveryRate: 5.0,
         _landingCooldown: 0,
-        _currentGrab: null,      // null or grab key (e.g., 'indy')
+        _currentGrab: null,
         _grabHeld: false,
 
         reset: function() {
@@ -46,19 +41,16 @@
             }
         },
 
-        // Called when player presses grab key
         startGrab: function() {
             const p = window.Game.player;
             if (!p || p.grounded) return;
             if (!this._grabHeld) {
                 this._grabHeld = true;
-                this._currentGrab = DEFAULT_GRAB; // could cycle with multiple presses
-                // Reduce spin speed while grabbing (easier to control)
+                this._currentGrab = DEFAULT_GRAB;
                 p.spinSpeed *= 0.5;
             }
         },
 
-        // Called when player releases grab key
         stopGrab: function() {
             this._grabHeld = false;
         },
@@ -81,10 +73,7 @@
             }
 
             if (!p.grounded) {
-                // AIRBORNE — spin physics
                 p.rotation += (p.spinSpeed || 0) * dt;
-
-                // Spin decay (slower if grabbing)
                 const decayMultiplier = this._grabHeld ? 0.6 : 1.0;
                 if (Math.abs(p.spinSpeed) > 0.05) {
                     const decay = SPIN_DECAY * dt * decayMultiplier;
@@ -94,13 +83,10 @@
                         p.spinSpeed -= Math.sign(p.spinSpeed) * decay;
                     }
                 }
-
-                // Clamp spin speed
                 if (Math.abs(p.spinSpeed) > MAX_SPIN_SPEED) {
                     p.spinSpeed = Math.sign(p.spinSpeed) * MAX_SPIN_SPEED;
                 }
             } else {
-                // GROUNDED — recover rotation
                 if (Math.abs(p.rotation) > 0.005) {
                     p.rotation *= Math.exp(-this._recoveryRate * dt);
                     if (Math.abs(p.rotation) < 0.008) p.rotation = 0;
@@ -135,33 +121,17 @@
             let quality, recoveryRate, scoreMultiplier, speedEffect, popupText, popupColor;
 
             if (angularError <= PERFECT_THRESHOLD) {
-                quality = 'perfect';
-                recoveryRate = RECOVERY_PERFECT;
-                scoreMultiplier = 2.0;
-                speedEffect = 1.05;
-                popupText = '✨ PERFECT!';
-                popupColor = '#ffd700';
+                quality = 'perfect'; recoveryRate = RECOVERY_PERFECT; scoreMultiplier = 2.0; speedEffect = 1.05;
+                popupText = '✨ PERFECT!'; popupColor = '#ffd700';
             } else if (angularError <= GOOD_THRESHOLD) {
-                quality = 'good';
-                recoveryRate = RECOVERY_GOOD;
-                scoreMultiplier = 1.0;
-                speedEffect = 1.0;
-                popupText = '👍 NICE!';
-                popupColor = '#7fff7f';
+                quality = 'good'; recoveryRate = RECOVERY_GOOD; scoreMultiplier = 1.0; speedEffect = 1.0;
+                popupText = '👍 NICE!'; popupColor = '#7fff7f';
             } else if (angularError <= SLOPPY_THRESHOLD) {
-                quality = 'sloppy';
-                recoveryRate = RECOVERY_SLOPPY;
-                scoreMultiplier = 0.5;
-                speedEffect = 0.85;
-                popupText = '😬 SLOPPY';
-                popupColor = '#ffaa44';
+                quality = 'sloppy'; recoveryRate = RECOVERY_SLOPPY; scoreMultiplier = 0.5; speedEffect = 0.85;
+                popupText = '😬 SLOPPY'; popupColor = '#ffaa44';
             } else {
-                quality = 'crash';
-                recoveryRate = RECOVERY_CRASH;
-                scoreMultiplier = 0;
-                speedEffect = 0.55;
-                popupText = '💥 CRASH!';
-                popupColor = '#ff4444';
+                quality = 'crash'; recoveryRate = RECOVERY_CRASH; scoreMultiplier = 0; speedEffect = 0.55;
+                popupText = '💥 CRASH!'; popupColor = '#ff4444';
                 G.shakeAmount = Math.max(G.shakeAmount, 7);
                 if (navigator.vibrate) navigator.vibrate([30, 20, 30]);
             }
@@ -169,18 +139,13 @@
             this._recoveryRate = recoveryRate;
             this._landingQuality = quality;
 
-            // Grab multiplier
             let grabMultiplier = 1.0;
             let grabName = '';
             if (this._grabHeld && this._currentGrab) {
                 const grabDef = GRAB_TYPES[this._currentGrab];
-                if (grabDef) {
-                    grabMultiplier = grabDef.multiplier;
-                    grabName = grabDef.name;
-                }
+                if (grabDef) { grabMultiplier = grabDef.multiplier; grabName = grabDef.name; }
             }
 
-            // Count spins
             const fullSpins = Math.floor(Math.abs(raw) / TWO_PI);
             let trickPoints = 0;
 
@@ -201,11 +166,8 @@
                 if (quality !== 'crash' && fullTrickName) {
                     G.trickList.push({
                         text: fullTrickName + ' ' + quality.toUpperCase() + '!',
-                        x: p.x + p.width / 2,
-                        y: p.y - 10,
-                        life: 1.6,
-                        points: trickPoints,
-                        color: popupColor
+                        x: p.x + p.width/2, y: p.y - 10,
+                        life: 1.6, points: trickPoints, color: popupColor
                     });
                 }
                 AudioEngine.playTrick(fullSpins);
@@ -214,23 +176,17 @@
                 G.comboCount = 0;
             }
 
-            // Landing popup
             G.trickList.push({
                 text: popupText,
-                x: p.x + p.width / 2,
-                y: p.y - 30,
-                life: 1.2,
-                points: quality === 'perfect' ? 50 : 0,
-                color: popupColor
+                x: p.x + p.width/2, y: p.y - 30,
+                life: 1.2, points: quality === 'perfect' ? 50 : 0, color: popupColor
             });
 
-            // Speed effect
             if (speedEffect !== 1.0 && G.state === 'playing') {
                 G._landingSpeedMod = speedEffect;
                 G._landingSpeedTimer = 0.6;
             }
 
-            // Audio
             if (quality === 'perfect') {
                 AudioEngine.playLand();
                 setTimeout(() => AudioEngine.playTrick(0), 80);
@@ -244,7 +200,6 @@
                 navigator.vibrate([25, 15, 25]);
             }
 
-            // Reset grab after landing
             this._grabHeld = false;
             this._currentGrab = null;
         },
