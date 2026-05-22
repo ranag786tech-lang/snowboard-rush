@@ -1,5 +1,4 @@
-// hud.js — HUD with landing quality feedback
-// ⚠️ Replace entire file
+// hud.js — HUD with boss health and grab popups
 (function() {
     'use strict';
 
@@ -13,7 +12,6 @@
             ctx.fillText(`Best: ${Math.floor(G.bestScore)}`, 18, 58);
             ctx.fillText(`Speed: ${Math.floor(G.currentSpeed)}`, 18, 76);
 
-            // Boost indicator
             if (G.boostActive) {
                 ctx.fillStyle = '#00ccff';
                 ctx.font = 'bold 15px "Segoe UI", system-ui, sans-serif';
@@ -21,7 +19,6 @@
                 ctx.fillText(`⚡ BOOST ${G.boostTimer.toFixed(1)}s`, G.W - 18, 34);
             }
 
-            // Combo counter
             if (G.comboCount > 1) {
                 ctx.fillStyle = '#ffd700';
                 ctx.font = 'bold 18px "Segoe UI", system-ui, sans-serif';
@@ -58,6 +55,29 @@
 
             // Achievement popups
             this.drawAchievementPopups(ctx, G);
+
+            // Boss health bar (if active)
+            const boss = BossSystem.getBoss();
+            if (boss) {
+                const sx = boss.worldX - G.cameraX;
+                const barWidth = 80;
+                const barHeight = 8;
+                const barX = sx + (boss.width - barWidth)/2;
+                const barY = boss.y - 15;
+                ctx.fillStyle = '#333';
+                ctx.fillRect(barX, barY, barWidth, barHeight);
+                const hpPercent = boss.health / 5;
+                const hpColor = hpPercent > 0.5 ? '#4caf50' : (hpPercent > 0.25 ? '#ff9800' : '#f44336');
+                ctx.fillStyle = hpColor;
+                ctx.fillRect(barX, barY, barWidth * hpPercent, barHeight);
+                ctx.strokeStyle = '#fff';
+                ctx.lineWidth = 1;
+                ctx.strokeRect(barX, barY, barWidth, barHeight);
+                ctx.fillStyle = '#fff';
+                ctx.font = 'bold 10px "Segoe UI"';
+                ctx.textAlign = 'center';
+                ctx.fillText('BOSS', sx + boss.width/2, barY - 5);
+            }
         },
 
         drawPopups: function(ctx, G) {
@@ -69,11 +89,8 @@
                 const alpha = Math.min(1, t.life);
                 const yOffset = (1.5 - t.life) * 28;
                 const color = t.color || '#ffffff';
-                ctx.fillStyle = color.replace(')', `,${alpha})`).replace('rgb', 'rgba');
-                if (color.startsWith('#')) {
-                    ctx.fillStyle = color;
-                    ctx.globalAlpha = alpha;
-                }
+                ctx.fillStyle = color;
+                ctx.globalAlpha = alpha;
                 ctx.font = 'bold 15px "Segoe UI", system-ui, sans-serif';
                 ctx.textAlign = 'center';
                 ctx.fillText(t.text, t.x, t.y - yOffset);
@@ -97,18 +114,15 @@
                 const bx = G.W/2, by = G.H - 80 - yOff;
                 ctx.fillStyle = `rgba(0,0,0,${alpha * 0.7})`;
                 ctx.beginPath();
-                if (ctx.roundRect) {
-                    ctx.roundRect(bx - 120, by - 18, 240, 40, 10);
-                } else {
-                    ctx.rect(bx - 120, by - 18, 240, 40);
-                }
+                if (ctx.roundRect) ctx.roundRect(bx - 120, by - 18, 240, 40, 10);
+                else ctx.rect(bx - 120, by - 18, 240, 40);
                 ctx.fill();
                 ctx.fillStyle = `rgba(255,215,0,${alpha})`;
-                ctx.font = 'bold 14px "Segoe UI", system-ui, sans-serif';
+                ctx.font = 'bold 14px "Segoe UI"';
                 ctx.textAlign = 'center';
                 ctx.fillText(a.text, bx, by);
                 ctx.fillStyle = `rgba(255,255,255,${alpha * 0.8})`;
-                ctx.font = '11px "Segoe UI", system-ui, sans-serif';
+                ctx.font = '11px "Segoe UI"';
                 ctx.fillText(a.sub, bx, by + 16);
             }
         }
