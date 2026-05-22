@@ -1,4 +1,4 @@
-// player.js
+// player.js — Player entity with grab support and crash state
 (function() {
     'use strict';
 
