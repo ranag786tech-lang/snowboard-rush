@@ -8,7 +8,6 @@
             const ctx = G.ctx;
             ctx.clearRect(0, 0, G.W, G.H);
 
-            // Apply screen shake
             ctx.save();
             if (G.shakeAmount > 0) {
                 const sx = (Math.random() - 0.5) * G.shakeAmount;
@@ -93,7 +92,6 @@
             ctx.translate(cx, cy);
 
             if (p.crashed) {
-                // Crashed pose: board sideways, rider tumbled
                 ctx.rotate(1.2);
                 ctx.fillStyle = '#5c3a20';
                 ctx.fillRect(-p.width/2 - 10, -5, p.width + 20, 8);
@@ -166,7 +164,6 @@
             ctx.fill();
             ctx.fillRect(px + 7, py - 9, 14, 6);
 
-            // Boost glow
             if (G.boostActive) {
                 ctx.shadowColor = '#00c8ff';
                 ctx.shadowBlur = 16;
