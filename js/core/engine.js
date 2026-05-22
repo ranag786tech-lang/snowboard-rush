@@ -7,49 +7,35 @@
     const H = canvas.height;  // 400
 
     window.Game = {
-        // Canvas & timing
         canvas, W, H,
         ctx: canvas.getContext('2d'),
         lastTimestamp: 0,
         dt: 0.016,
 
-        // Game state
-        state: 'start',     // 'start' | 'playing' | 'over'
+        state: 'start',
         score: 0,
         distance: 0,
         bestScore: 0,
         cameraX: 0,
 
-        // Player reference (filled by player.js)
         player: null,
-
-        // World objects
         obstacles: [],
         snowflakes: [],
         particles: [],
         landingParticles: [],
 
-        // Systems state
         boostActive: false,
         boostTimer: 0,
         shakeAmount: 0,
         comboCount: 0,
         trickList: [],
 
-        // Terrain
-        terrainOffset: 0,
-
-        // Audio flag
         audioUnlocked: false,
-
-        // Achievements tracking
         achievementsEarned: [],
 
-        // Obstacle timer
         obstacleTimer: 0,
         spawnDelay: 0,
 
-        // Physics constants
         GRAVITY: 1800,
         BASE_SPEED: 380,
         JUMP_VELOCITY: -650,
@@ -57,11 +43,14 @@
         coyoteTimer: 0,
         wasGrounded: true,
 
-        // Parallax offsets
         mountainOffset1: 0,
         mountainOffset2: 0,
+        terrainOffset: 0,
 
-        // Initialize / reset
+        _landingSpeedMod: 1.0,
+        _landingSpeedTimer: 0,
+        _achPopups: [],
+
         init: function() {
             this.state = 'start';
             this.score = 0;
@@ -84,6 +73,9 @@
             this.mountainOffset2 = 0;
             this.achievementsEarned = [];
             this.currentSpeed = this.BASE_SPEED;
+            this._landingSpeedMod = 1.0;
+            this._landingSpeedTimer = 0;
+            this._achPopups = [];
 
             PlayerEntity.reset();
             ObstacleManager.reset();
@@ -92,12 +84,11 @@
             AchievementSystem.reset();
             this.initSnowflakes();
 
-            // Load best score
+            if (this.player) this.player.crashed = false;
+
             try {
                 this.bestScore = parseInt(localStorage.getItem('snowBest')) || 0;
             } catch(e) { this.bestScore = 0; }
-
-            // Load earned achievements
             try {
                 this.achievementsEarned = JSON.parse(localStorage.getItem('snowAchievements') || '[]');
             } catch(e) { this.achievementsEarned = []; }
@@ -125,11 +116,15 @@
             if (this.state !== 'playing') return;
             this.state = 'over';
             this.shakeAmount = 14;
-
-            // Vibration
             if (navigator.vibrate) navigator.vibrate([50, 30, 50, 30, 80]);
 
-            // Spawn crash particles
+            if (this.player) {
+                this.player.crashed = true;
+                this.player.rotation = 0;
+                this.player.spinSpeed = 0;
+                TrickSystem.stopGrab && TrickSystem.stopGrab();
+            }
+
             const p = this.player;
             for (let i = 0; i < 20; i++) {
                 this.particles.push({
@@ -140,17 +135,13 @@
                 });
             }
 
-            // Check high score
             if (this.score > this.bestScore) {
                 this.bestScore = this.score;
                 try { localStorage.setItem('snowBest', this.bestScore); } catch(e) {}
             }
-
-            // Save achievements
             try {
                 localStorage.setItem('snowAchievements', JSON.stringify(this.achievementsEarned));
             } catch(e) {}
-
             AchievementSystem.checkAll();
         },
 
@@ -162,7 +153,6 @@
         }
     };
 
-    // Register service worker
     if ('serviceWorker' in navigator) {
         navigator.serviceWorker.register('service-worker.js').catch(() => {});
     }
