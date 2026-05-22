@@ -1,16 +1,11 @@
-// main.js — Input handling, game loop, initialization
-// ⚠️ Replace entire file
+// main.js — Input with grab key, boss collision, updated loop
 (function() {
     'use strict';
 
     const canvas = document.getElementById('gameCanvas');
     const G = window.Game;
 
-    // ── Input Handling (Protected during Wipeout State) ──
     function handleKeyDown(e) {
-        // Agar game over ya wipeout ho chuka hai, toh inputs block karein
-        if (G.state !== 'playing') return;
-
         if (e.key === ' ' || e.key === 'Space' || e.key === 'ArrowUp' || e.key === 'Up') {
             e.preventDefault();
             PlayerEntity.jump();
@@ -23,6 +18,11 @@
             e.preventDefault();
             PlayerEntity.setSpin('right');
         }
+        // Grab key
+        if (e.key === 'g' || e.key === 'G' || e.key === 'Shift') {
+            e.preventDefault();
+            TrickSystem.startGrab();
+        }
     }
 
     function handleKeyUp(e) {
@@ -30,27 +30,31 @@
             e.preventDefault();
             PlayerEntity.setSpin('stop');
         }
+        if (e.key === 'g' || e.key === 'G' || e.key === 'Shift') {
+            e.preventDefault();
+            TrickSystem.stopGrab();
+        }
     }
 
     function handleTouchStart(e) {
-        if (G.state !== 'playing') return;
         e.preventDefault();
-
         const touch = e.touches[0];
         const rect = canvas.getBoundingClientRect();
         const tx = touch.clientX - rect.left;
         const scaleX = G.W / rect.width;
         const canvasX = tx * scaleX;
 
-        // Jump trigger
         PlayerEntity.jump();
 
-        // Spin logic based on exact screen division (Airborne calculation protection)
         if (G.player && !G.player.grounded) {
             if (canvasX < G.W * 0.4) {
                 PlayerEntity.setSpin('left');
             } else if (canvasX > G.W * 0.6) {
                 PlayerEntity.setSpin('right');
+            }
+            // Grab if touching middle area
+            if (canvasX > G.W * 0.3 && canvasX < G.W * 0.7) {
+                TrickSystem.startGrab();
             }
         }
     }
@@ -58,11 +62,10 @@
     function handleTouchEnd(e) {
         e.preventDefault();
         PlayerEntity.setSpin('stop');
+        TrickSystem.stopGrab();
     }
 
-    // ── Particle Updates (Perfect Frame-Independent Delta Tuning) ──
     function updateParticles(dt) {
-        // Crash particles physics
         for (let i = G.particles.length - 1; i >= 0; i--) {
             const p = G.particles[i];
             p.x += p.vx * dt;
@@ -71,7 +74,6 @@
             p.life -= dt * 2.3;
             if (p.life <= 0) G.particles.splice(i, 1);
         }
-        // Landing particles physics
         for (let i = G.landingParticles.length - 1; i >= 0; i--) {
             const p = G.landingParticles[i];
             p.x += p.vx * dt;
@@ -80,7 +82,6 @@
             p.life -= dt * 2.1;
             if (p.life <= 0) G.landingParticles.splice(i, 1);
         }
-        // Smooth Snowflakes Vector update (Fixes the high-speed jitter)
         for (const f of G.snowflakes) {
             f.y += f.speed * dt;
             f.x += f.drift * dt;
@@ -90,51 +91,30 @@
         }
     }
 
-    // ── Main Core Update Loop ──
     function update(dt) {
-        // Delta time clamping standard for 60Hz-144Hz screen stability
-        // Preventions for the "teleportation" bug when the game speeds up to 418+
-        if (dt > 0.1) dt = 0.1;
+        if (dt > 0.12) dt = 0.12;
 
-        // Decay screen shake smoothly based on standard timeline
         if (G.shakeAmount > 0) {
             G.shakeAmount = Math.max(0, G.shakeAmount - 7 * dt);
         }
 
         updateParticles(dt);
 
-        // Core dynamic check: If wipeout triggers, freeze obstacles/world rendering but allow particles
-        if (G.state !== 'playing') {
-            // Force reset any underlying spin drift lingering after crash
-            if (G.player) PlayerEntity.setSpin('stop');
-            return;
-        }
+        if (G.state !== 'playing') return;
 
-        // Physics engine processing with structural Y-axis updates
         Physics.update(dt);
-
-        // Rotation & air trick mechanics verification
         TrickSystem.update(dt);
-
-        // Obstacles (Dynamic, rhythm speed adaptive spawning)
         ObstacleManager.update(dt);
-
-        // Powerups, Bosses & Achievements trackers
         PowerupSystem.update(dt);
-        BossSystem.update(dt);
+        BossSystem.update(dt); // handles boss movement, attacks, stomp, collision
+
         AchievementSystem.check();
     }
 
-    // ── Ultra-Smooth Delta Time Game Loop ──
     function gameLoop(timestamp) {
         if (!G.lastTimestamp) G.lastTimestamp = timestamp;
-        
-        // Exact frame rate calculation to avoid background jittering at high speeds
         let dt = (timestamp - G.lastTimestamp) / 1000;
-        
-        // Anti-break protection for lag spikes or minimized tabs
-        if (dt <= 0 || dt > 0.1) dt = 0.0166; 
-        
+        if (dt <= 0) dt = 0.016;
         G.lastTimestamp = timestamp;
         G.dt = dt;
 
@@ -144,7 +124,6 @@
         requestAnimationFrame(gameLoop);
     }
 
-    // ── Initialization & Event Listeners Cleaner ──
     function init() {
         window.removeEventListener('keydown', handleKeyDown);
         window.removeEventListener('keyup', handleKeyUp);
