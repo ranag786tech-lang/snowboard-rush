@@ -95,19 +95,21 @@
                     obs.passed = true;
                     G.score += 10;
                 }
+                // Inside ObstacleManager.update, replace the collision check block with:
+if (G.state === 'playing') {
+    const pCircle = Physics.getPlayerCircle();
+    const oRect = Physics.getObstacleRect({x: screenX, y: obs.y, width: obs.width, height: obs.height});
 
-                // Collision check
-                if (G.state === 'playing') {
-                    const pr = Physics.getPlayerHitbox();
-                    const or = {
-                        x: screenX + 5, y: obs.y + 5,
-                        w: obs.width - 10, h: obs.height - 8
-                    };
-                    if (Physics.checkCollision(pr, or)) {
-                        G.triggerGameOver();
-                    }
-                }
+    // Additional safety: if player's feet are clearly above obstacle top, no collision
+    const playerFeetY = G.player.y + G.player.height - 4; // feet position
+    const obstacleTopY = obs.y + 8; // top of obstacle with padding
 
+    if (playerFeetY > obstacleTopY) { // only check if player is at or below obstacle top
+        if (Physics.checkCircleCollision(pCircle.x, pCircle.y, pCircle.radius, oRect)) {
+            G.triggerGameOver();
+        }
+    }
+}
                 if (screenX < -50) G.obstacles.splice(i, 1);
             }
         },
