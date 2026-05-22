@@ -1,4 +1,4 @@
-// main.js — Input with grab key, boss collision, updated loop
+// main.js — Input handling, game loop, with crash input lock
 (function() {
     'use strict';
 
@@ -6,6 +6,13 @@
     const G = window.Game;
 
     function handleKeyDown(e) {
+        if (G.state === 'over') {
+            if (e.key === ' ' || e.key === 'Space' || e.key === 'ArrowUp') {
+                e.preventDefault();
+                PlayerEntity.jump();
+            }
+            return;
+        }
         if (e.key === ' ' || e.key === 'Space' || e.key === 'ArrowUp' || e.key === 'Up') {
             e.preventDefault();
             PlayerEntity.jump();
@@ -18,7 +25,6 @@
             e.preventDefault();
             PlayerEntity.setSpin('right');
         }
-        // Grab key
         if (e.key === 'g' || e.key === 'G' || e.key === 'Shift') {
             e.preventDefault();
             TrickSystem.startGrab();
@@ -26,6 +32,7 @@
     }
 
     function handleKeyUp(e) {
+        if (G.state === 'over') return;
         if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') {
             e.preventDefault();
             PlayerEntity.setSpin('stop');
@@ -38,6 +45,10 @@
 
     function handleTouchStart(e) {
         e.preventDefault();
+        if (G.state === 'over') {
+            PlayerEntity.jump();
+            return;
+        }
         const touch = e.touches[0];
         const rect = canvas.getBoundingClientRect();
         const tx = touch.clientX - rect.left;
@@ -45,47 +56,37 @@
         const canvasX = tx * scaleX;
 
         PlayerEntity.jump();
-
         if (G.player && !G.player.grounded) {
-            if (canvasX < G.W * 0.4) {
-                PlayerEntity.setSpin('left');
-            } else if (canvasX > G.W * 0.6) {
-                PlayerEntity.setSpin('right');
-            }
-            // Grab if touching middle area
-            if (canvasX > G.W * 0.3 && canvasX < G.W * 0.7) {
-                TrickSystem.startGrab();
-            }
+            if (canvasX < G.W * 0.4) PlayerEntity.setSpin('left');
+            else if (canvasX > G.W * 0.6) PlayerEntity.setSpin('right');
+            if (canvasX > G.W * 0.3 && canvasX < G.W * 0.7) TrickSystem.startGrab();
         }
     }
 
     function handleTouchEnd(e) {
         e.preventDefault();
+        if (G.state !== 'playing') return;
         PlayerEntity.setSpin('stop');
         TrickSystem.stopGrab();
     }
 
+    // Particle update (same)
     function updateParticles(dt) {
         for (let i = G.particles.length - 1; i >= 0; i--) {
             const p = G.particles[i];
-            p.x += p.vx * dt;
-            p.y += p.vy * dt;
-            p.vy += 1100 * dt;
+            p.x += p.vx * dt; p.y += p.vy * dt; p.vy += 1100 * dt;
             p.life -= dt * 2.3;
-            if (p.life <= 0) G.particles.splice(i, 1);
+            if (p.life <= 0) G.particles.splice(i,1);
         }
         for (let i = G.landingParticles.length - 1; i >= 0; i--) {
             const p = G.landingParticles[i];
-            p.x += p.vx * dt;
-            p.y += p.vy * dt;
-            p.vy += 650 * dt;
+            p.x += p.vx * dt; p.y += p.vy * dt; p.vy += 650 * dt;
             p.life -= dt * 2.1;
-            if (p.life <= 0) G.landingParticles.splice(i, 1);
+            if (p.life <= 0) G.landingParticles.splice(i,1);
         }
         for (const f of G.snowflakes) {
-            f.y += f.speed * dt;
-            f.x += f.drift * dt;
-            if (f.y > G.H + 8) { f.y = -8; f.x = Math.random() * G.W; }
+            f.y += f.speed * dt; f.x += f.drift * dt;
+            if (f.y > G.H + 8) { f.y = -8; f.x = Math.random()*G.W; }
             if (f.x > G.W + 10) f.x = -10;
             if (f.x < -10) f.x = G.W + 10;
         }
@@ -93,34 +94,26 @@
 
     function update(dt) {
         if (dt > 0.12) dt = 0.12;
-
-        if (G.shakeAmount > 0) {
-            G.shakeAmount = Math.max(0, G.shakeAmount - 7 * dt);
-        }
-
+        if (G.shakeAmount > 0) G.shakeAmount = Math.max(0, G.shakeAmount - 7 * dt);
         updateParticles(dt);
-
         if (G.state !== 'playing') return;
 
-        Physics.update(dt);
+        Physics.update(dt); // uses smoothed dt internally
         TrickSystem.update(dt);
         ObstacleManager.update(dt);
         PowerupSystem.update(dt);
-        BossSystem.update(dt); // handles boss movement, attacks, stomp, collision
-
+        BossSystem.update(dt);
         AchievementSystem.check();
     }
 
     function gameLoop(timestamp) {
         if (!G.lastTimestamp) G.lastTimestamp = timestamp;
-        let dt = (timestamp - G.lastTimestamp) / 1000;
-        if (dt <= 0) dt = 0.016;
+        let rawDt = (timestamp - G.lastTimestamp) / 1000;
+        if (rawDt <= 0) rawDt = 0.016;
         G.lastTimestamp = timestamp;
-        G.dt = dt;
-
-        update(dt);
+        G.dt = rawDt;
+        update(rawDt);
         Renderer.draw();
-
         requestAnimationFrame(gameLoop);
     }
 
