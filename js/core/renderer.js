@@ -1,4 +1,4 @@
-// renderer.js — All drawing routines
+// renderer.js — Updated drawing: grab pose, boss integration
 (function() {
     'use strict';
 
@@ -8,7 +8,6 @@
             const ctx = G.ctx;
             ctx.clearRect(0, 0, G.W, G.H);
 
-            // Apply screen shake
             ctx.save();
             if (G.shakeAmount > 0) {
                 const sx = (Math.random() - 0.5) * G.shakeAmount;
@@ -25,8 +24,9 @@
             this.drawPlayer(ctx, G);
             this.drawCrashParticles(ctx, G);
             this.drawSnowflakes(ctx, G);
+            BossSystem.draw(ctx, G); // draw boss and snowballs
 
-            ctx.restore(); // end shake
+            ctx.restore();
 
             HUD.draw(ctx, G);
             Overlays.draw(ctx, G);
@@ -42,7 +42,6 @@
         },
 
         drawMountains: function(ctx, G) {
-            // Far mountains
             ctx.fillStyle = '#c1dde8';
             ctx.beginPath();
             ctx.moveTo(0, 280);
@@ -51,7 +50,6 @@
             }
             ctx.lineTo(G.W, 310); ctx.lineTo(0, 310); ctx.fill();
 
-            // Near mountains
             ctx.fillStyle = '#b0d0dc';
             ctx.beginPath();
             ctx.moveTo(0, 305);
@@ -69,12 +67,10 @@
             for (let x = 0; x <= G.W; x += 30) {
                 const wx = G.cameraX + x;
                 const h = TerrainSystem.getHeight(wx);
-                const screenY = h;
-                ctx.lineTo(x, screenY + 3);
+                ctx.lineTo(x, h + 3);
             }
             ctx.lineTo(G.W, G.H); ctx.lineTo(0, G.H); ctx.fill();
 
-            // Ground edge line
             ctx.strokeStyle = '#dce8f0';
             ctx.lineWidth = 2;
             ctx.beginPath();
@@ -104,26 +100,55 @@
             const px = p.x, py = p.y, pw = p.width, ph = p.height;
 
             // Board
-            ctx.fillStyle = '#5c3a20'; ctx.fillRect(px - 5, py + ph - 8, pw + 10, 8);
-            ctx.fillStyle = '#8b5a2b'; ctx.fillRect(px - 2, py + ph - 6, pw + 4, 4);
+            ctx.fillStyle = '#5c3a20';
+            ctx.fillRect(px - 5, py + ph - 8, pw + 10, 8);
+            ctx.fillStyle = '#8b5a2b';
+            ctx.fillRect(px - 2, py + ph - 6, pw + 4, 4);
+
             // Legs
-            ctx.fillStyle = '#1a3350'; ctx.fillRect(px + 6, py + 26, 8, 18);
+            ctx.fillStyle = '#1a3350';
+            ctx.fillRect(px + 6, py + 26, 8, 18);
             ctx.fillRect(px + 16, py + 26, 8, 18);
+
             // Body
-            ctx.fillStyle = '#2a5f8a'; ctx.fillRect(px + 4, py + 8, 20, 20);
-            // Arms
-            ctx.fillStyle = '#1a3350'; ctx.fillRect(px - 3, py + 12, 8, 6);
-            ctx.fillRect(px + 23, py + 12, 8, 6);
+            ctx.fillStyle = '#2a5f8a';
+            ctx.fillRect(px + 4, py + 8, 20, 20);
+
+            // Arms — if grabbing, draw one hand reaching down to board
+            const isGrabbing = TrickSystem.isGrabbing && TrickSystem.isGrabbing();
+            ctx.fillStyle = '#1a3350';
+            if (isGrabbing) {
+                // Left arm reaching to board center
+                ctx.beginPath();
+                ctx.moveTo(px + 4, py + 18);
+                ctx.lineTo(px + pw/2, py + ph - 4);
+                ctx.lineWidth = 4;
+                ctx.strokeStyle = '#1a3350';
+                ctx.stroke();
+                ctx.lineWidth = 1;
+            } else {
+                ctx.fillRect(px - 3, py + 12, 8, 6);
+                ctx.fillRect(px + 23, py + 12, 8, 6);
+            }
+
             // Head
-            ctx.fillStyle = '#f7d9aa'; ctx.beginPath();
-            ctx.arc(px + 14, py + 4, 10, 0, Math.PI * 2); ctx.fill();
+            ctx.fillStyle = '#f7d9aa';
+            ctx.beginPath();
+            ctx.arc(px + 14, py + 4, 10, 0, Math.PI * 2);
+            ctx.fill();
+
             // Goggles
-            ctx.fillStyle = '#1c1c1c'; ctx.fillRect(px + 5, py - 1, 18, 5);
-            ctx.fillStyle = '#4a90e2'; ctx.fillRect(px + 7, py, 7, 3);
+            ctx.fillStyle = '#1c1c1c';
+            ctx.fillRect(px + 5, py - 1, 18, 5);
+            ctx.fillStyle = '#4a90e2';
+            ctx.fillRect(px + 7, py, 7, 3);
             ctx.fillRect(px + 16, py, 7, 3);
+
             // Beanie
-            ctx.fillStyle = '#d94040'; ctx.beginPath();
-            ctx.ellipse(px + 14, py - 1, 11, 7, 0, Math.PI, 0); ctx.fill();
+            ctx.fillStyle = '#d94040';
+            ctx.beginPath();
+            ctx.ellipse(px + 14, py - 1, 11, 7, 0, Math.PI, 0);
+            ctx.fill();
             ctx.fillRect(px + 7, py - 9, 14, 6);
 
             // Boost glow
@@ -141,21 +166,21 @@
         drawLandingParticles: function(ctx, G) {
             for (const p of G.landingParticles) {
                 ctx.fillStyle = `rgba(255,255,255,${p.life * 0.85})`;
-                ctx.beginPath(); ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2); ctx.fill();
+                ctx.beginPath(); ctx.arc(p.x, p.y, p.size, 0, Math.PI*2); ctx.fill();
             }
         },
 
         drawCrashParticles: function(ctx, G) {
             for (const p of G.particles) {
                 ctx.fillStyle = `rgba(255,255,255,${p.life * 0.7})`;
-                ctx.beginPath(); ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2); ctx.fill();
+                ctx.beginPath(); ctx.arc(p.x, p.y, p.size, 0, Math.PI*2); ctx.fill();
             }
         },
 
         drawSnowflakes: function(ctx, G) {
             for (const f of G.snowflakes) {
                 ctx.fillStyle = `rgba(255,255,255,${f.opacity})`;
-                ctx.beginPath(); ctx.arc(f.x, f.y, f.radius, 0, Math.PI * 2); ctx.fill();
+                ctx.beginPath(); ctx.arc(f.x, f.y, f.radius, 0, Math.PI*2); ctx.fill();
             }
         }
     };
